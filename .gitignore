@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+env/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Data files (terlalu besar untuk GitHub — simpan di Google Drive)
+data/raw/*.txt
+data/processed/train_embeddings.npy
+data/processed/svm_model.pkl
+
+# Logs besar
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
