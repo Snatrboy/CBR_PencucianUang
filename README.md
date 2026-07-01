@@ -33,26 +33,28 @@ Siklus CBR yang diimplementasikan:
 ---
 
 ## Struktur Repository
+
+```
 CBR_PencucianUang/
 │
 ├── data/
-│   ├── raw/              # Taruh semua file PDF putusan di sini sebelum menjalankan notebook
-│   ├── processed/        # Otomatis terisi: cases.csv, cases.json, embeddings, model
-│   ├── eval/             # Otomatis terisi: metrics, confusion matrix, error analysis
-│   └── results/          # Otomatis terisi: predictions.csv, predictions_bert.csv
+│   ├── raw/          # Taruh semua file PDF putusan di sini
+│   ├── processed/    # Otomatis terisi: cases.csv, cases.json, embeddings, model
+│   ├── eval/         # Otomatis terisi: metrics, confusion matrix, error analysis
+│   └── results/      # Otomatis terisi: predictions.csv, predictions_bert.csv
 │
-├── logs/                 # Otomatis terisi: cleaning.log, failed files log
+├── logs/             # Otomatis terisi: cleaning.log, failed files log
 │
 ├── notebooks/
 │   └── CBR_PencucianUang.ipynb   # Notebook utama (semua tahap CBR)
 │
-├── requirements.txt      # Daftar library Python
-└── README.md             # Dokumentasi ini
+├── requirements.txt  # Daftar library Python
+└── README.md         # Dokumentasi ini
+```
 
 > **Catatan:** Folder `data/processed/`, `data/eval/`, `data/results/`, dan `logs/`
 > akan terisi otomatis saat notebook dijalankan. Satu-satunya folder yang perlu
 > diisi manual adalah `data/raw/` — taruh semua file PDF putusan di sana.
-
 ---
 
 ## Persyaratan Sistem
@@ -81,12 +83,15 @@ pip install -r requirements.txt
 ### 3. Taruh file PDF putusan
 
 Salin semua file PDF putusan ke folder `data/raw/`:
+
+```
 CBR_PencucianUang/
 └── data/
-└── raw/
-├── putusan_408_pk_pid.sus_2019_xxx.pdf
-├── putusan_2401_k_pid.sus_2018_xxx.pdf
-└── ... (116 file PDF)
+    └── raw/
+        ├── putusan_408_pk_pid.sus_2019_xxx.pdf
+        ├── putusan_2401_k_pid.sus_2018_xxx.pdf
+        └── ... (116 file PDF)
+```
 
 ### 4. Jalankan notebook
 
@@ -223,6 +228,10 @@ print(f"Prediksi SVM: {svm_label} (confidence: {confidence:.2%})")
 |-------|----------|-----------|--------|----------|
 | TF-IDF + Cosine Similarity | 0.4545 | 0.4744 | 0.4545 | 0.4152 |
 | Indo-Sentence-BERT | **0.5909** | **0.6288** | **0.5909** | **0.5809** |
+
+> Nilai diisi otomatis setelah notebook dijalankan.
+> Lihat `data/eval/retrieval_metrics.csv` dan `data/eval/classifier_metrics.csv` untuk hasil aktual.
+
 
 ### Precision@K (TF-IDF)
 
