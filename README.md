@@ -13,22 +13,26 @@
 Sistem ini mengimplementasikan siklus **Case-Based Reasoning (CBR)** lengkap untuk menganalisis dan memprediksi amar putusan pengadilan pidana pencucian uang. Sistem memanfaatkan dua pendekatan retrieval:
 
 1. **TF-IDF + Cosine Similarity** — pendekatan statistik
-2. **Multilingual BERT (MiniLM)** — pendekatan text embedding
+2. **Indo-Sentence-BERT** — pendekatan text embedding khusus Bahasa Indonesia
 3. **SVM & Naive Bayes** — classifier machine learning di atas TF-IDF
 
-Siklus CBR yang diimplementasikan:
+Label amar putusan dikelompokkan menjadi 4 kategori:
 
-```
+| Kategori | Rentang Vonis |
+|----------|---------------|
+| Ringan | 1–4 tahun penjara |
+| Sedang | 5–8 tahun penjara |
+| Berat | 9+ tahun penjara |
+| Bebas | Bebas / lepas dari tuntutan |
+
+Siklus CBR yang diimplementasikan:
 [Case Base] → [Case Representation] → [Case Retrieval] → [Solution Reuse] → [Retain]
-                                             ↑
-                                       [Evaluation]
-```
+↑
+[Evaluation]
 
 ---
 
 ## Struktur Repository
-
-```
 CBR_PencucianUang/
 │
 ├── data/
@@ -44,7 +48,6 @@ CBR_PencucianUang/
 │
 ├── requirements.txt      # Daftar library Python
 └── README.md             # Dokumentasi ini
-```
 
 > **Catatan:** Folder `data/processed/`, `data/eval/`, `data/results/`, dan `logs/`
 > akan terisi otomatis saat notebook dijalankan. Satu-satunya folder yang perlu
@@ -78,15 +81,12 @@ pip install -r requirements.txt
 ### 3. Taruh file PDF putusan
 
 Salin semua file PDF putusan ke folder `data/raw/`:
-
-```
 CBR_PencucianUang/
 └── data/
-    └── raw/
-        ├── putusan_408_pk_pid.sus_2019_xxx.pdf
-        ├── putusan_2401_k_pid.sus_2018_xxx.pdf
-        └── ... (116 file PDF)
-```
+└── raw/
+├── putusan_408_pk_pid.sus_2019_xxx.pdf
+├── putusan_2401_k_pid.sus_2018_xxx.pdf
+└── ... (116 file PDF)
 
 ### 4. Jalankan notebook
 
@@ -118,8 +118,8 @@ ke folder `data/` dan `logs/` di dalam project.
 
 | Cell | Fungsi |
 |------|--------|
-| Cell 6 | Buat DataFrame, normalisasi amar putusan, simpan CSV & JSON |
-| Cell 7 | Train/test split 80:20, buat `queries.json` & `ground_truth.json` |
+| Cell 6 | Buat DataFrame, normalisasi & binning amar putusan (Ringan/Sedang/Berat/Bebas), simpan CSV & JSON |
+| Cell 7 | Train/test split 80:20 stratified, buat `queries.json` & `ground_truth.json` |
 
 **Output:** `data/processed/cases.csv`, `data/processed/cases.json`, `data/eval/queries.json`
 
@@ -129,7 +129,7 @@ ke folder `data/` dan `logs/` di dalam project.
 |------|--------|
 | Cell 8  | Build TF-IDF retriever, fungsi `retrieve_tfidf()`, `predict_outcome()` |
 | Cell 8B | SVM & Naive Bayes classifier di atas TF-IDF, cross-validation 5-fold |
-| Cell 9  | BERT embedding, fungsi `retrieve_bert()` |
+| Cell 9  | Indo-Sentence-BERT embedding, fungsi `retrieve_bert()`, `retrieve_ensemble()`, `predict_with_threshold()` |
 
 **Output:** `data/processed/train_embeddings.npy`, `data/processed/svm_model.pkl`
 
@@ -188,6 +188,23 @@ hasil_bert = retrieve_bert(query, train_data, train_embeddings, top_k=5)
 print(hasil_bert[['case_id', 'amar_normalized', 'similarity']])
 ```
 
+### Retrieve dengan Ensemble TF-IDF + BERT
+```python
+hasil_ensemble = retrieve_ensemble(
+    query, train_data, vectorizer, tfidf_matrix,
+    train_embeddings, top_k=5, alpha=0.4
+)
+print(hasil_ensemble[['case_id', 'amar_normalized', 'similarity']])
+```
+
+### Prediksi dengan rejection threshold
+```python
+prediksi, avg_sim = predict_with_threshold(
+    query, train_data, vectorizer, tfidf_matrix, threshold=0.15
+)
+print(f"Prediksi: {prediksi} (avg similarity: {avg_sim:.4f})")
+```
+
 ### Prediksi menggunakan SVM
 ```python
 results, svm_label, confidence = retrieve_with_svm(
@@ -200,15 +217,38 @@ print(f"Prediksi SVM: {svm_label} (confidence: {confidence:.2%})")
 
 ## Hasil Evaluasi
 
+### Retrieval Model
+
 | Model | Accuracy | Precision | Recall | F1-Score |
 |-------|----------|-----------|--------|----------|
-| TF-IDF + Cosine Similarity | — | — | — | — |
-| Multilingual BERT (MiniLM) | — | — | — | — |
-| SVM Linear (TF-IDF) | — | — | — | — |
-| Complement Naive Bayes | — | — | — | — |
+| TF-IDF + Cosine Similarity | 0.4545 | 0.4744 | 0.4545 | 0.4152 |
+| Indo-Sentence-BERT | **0.5909** | **0.6288** | **0.5909** | **0.5809** |
 
-> Nilai diisi otomatis setelah notebook dijalankan.
-> Lihat `data/eval/retrieval_metrics.csv` dan `data/eval/classifier_metrics.csv` untuk hasil aktual.
+### Precision@K (TF-IDF)
+
+| Metrik | Nilai |
+|--------|-------|
+| Precision@3 | 0.7727 |
+| Precision@5 | **0.8636** |
+
+### Cross Validation (TF-IDF, 5-Fold)
+
+| Metrik | Nilai |
+|--------|-------|
+| Mean Accuracy | 0.5009 |
+| Std Deviation | ±0.1179 |
+
+### Distribusi Label Dataset
+
+| Kategori Vonis | Jumlah Dokumen |
+|----------------|----------------|
+| Berat (9+ tahun) | 45 |
+| Ringan (1–4 tahun) | 31 |
+| Sedang (5–8 tahun) | 23 |
+| Bebas | 7 |
+| Tidak diketahui* | 10 |
+
+> *Dokumen dengan label "Tidak diketahui" dikecualikan dari proses training dan evaluasi.
 
 ---
 
